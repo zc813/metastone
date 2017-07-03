@@ -29,30 +29,30 @@ public class GreedyOptimizeTurn extends Behaviour {
 	}
 
 	private double alphaBeta(GameContext context, int playerId, GameAction action, int depth) {
-		GameContext simulation = context.clone();
-		simulation.getLogic().performGameAction(playerId, action);
-		if (!evaluatedActions.containsKey(action.getActionType())) {
-			evaluatedActions.put(action.getActionType(), 0);
+		GameContext simulation = context.clone();  // clone当前环境
+		simulation.getLogic().performGameAction(playerId, action); // 在clone的环境中执行action
+		if (!evaluatedActions.containsKey(action.getActionType())) { //evaluatedActions中似乎记录的是每种actionType的action的执行次数
+			evaluatedActions.put(action.getActionType(), 0); // 如果当前执行的action的actionType还没出现过，增加一个key，value设置为0
 		}
-		evaluatedActions.put(action.getActionType(), evaluatedActions.get(action.getActionType()) + 1);
+		evaluatedActions.put(action.getActionType(), evaluatedActions.get(action.getActionType()) + 1); //在evaluatedActions中将刚执行的actionType的对应value加1
 		if (depth == 0 || simulation.getActivePlayerId() != playerId || simulation.gameDecided()) {
-			return heuristic.getScore(simulation, playerId);
+			return heuristic.getScore(simulation, playerId);  // depth层递归结束、发生玩家切换（我方这轮打完了）或者比赛结果已定时，使用heuristic方法评估当前局面，返回score
 		}
 
-		List<GameAction> validActions = simulation.getValidActions();
+		List<GameAction> validActions = simulation.getValidActions();  //执行完一个action之后，获取接下来可以执行的action
 
 		double score = Float.NEGATIVE_INFINITY;
 		if (table.known(simulation)) {
-			return table.getScore(simulation);
+			return table.getScore(simulation); // 只是为了避免重复计算？
 			// logger.info("GameState is known, has score of {}", score);
 		} else {
 			for (GameAction gameAction : validActions) {
-				score = Math.max(score, alphaBeta(simulation, playerId, gameAction, depth - 1));
+				score = Math.max(score, alphaBeta(simulation, playerId, gameAction, depth - 1));  // 进一步遍历validactions，递归调用alphaBeta，取评分较大的
 				if (score >= 10000) {
 					break;
 				}
 			}
-			table.save(simulation, score);
+			table.save(simulation, score);  // 保存一个局面和它的得分（从这个局面开始执行depth-1次action后能达到的最高局面评分）
 		}
 
 		return score;
@@ -96,11 +96,11 @@ public class GreedyOptimizeTurn extends Behaviour {
 		}
 
 		// for now, do now evaluate battecry actions
-		if (validActions.get(0).getActionType() == ActionType.BATTLECRY) {
+		if (validActions.get(0).getActionType() == ActionType.BATTLECRY) {   // 不清楚为什么战吼需要特殊处理？
 			return validActions.get(context.getLogic().random(validActions.size()));
 		}
 
-		if (assignedGC != 0 && assignedGC != context.hashCode()) {
+		if (assignedGC != 0 && assignedGC != context.hashCode()) {   // 意味着什么？
 			logger.warn("AI behaviour was used in another context!");
 		}
 
@@ -113,7 +113,7 @@ public class GreedyOptimizeTurn extends Behaviour {
 
 		for (GameAction gameAction : validActions) {
 			logger.debug("********************* SIMULATION STARTS *********************");
-			double score = alphaBeta(context, player.getId(), gameAction, 3);
+			double score = alphaBeta(context, player.getId(), gameAction, 3);  // 遍历所有validaction，使用alphaBeta计算评分
 			if (score > bestScore) {
 				bestAction = gameAction;
 				bestScore = score;
@@ -124,10 +124,10 @@ public class GreedyOptimizeTurn extends Behaviour {
 		int totalActionCount = 0;
 		for (ActionType actionType : evaluatedActions.keySet()) {
 			int count = evaluatedActions.get(actionType);
-			logger.debug("{} actions of type {} have been evaluated this turn", count, actionType);
+			logger.debug("{} actions of type {} have been evaluated this turn", count, actionType);  // 只是为了观察一些信息么？
 			totalActionCount += count;
 		}
-		logger.debug("{} actions in total have been evaluated this turn", totalActionCount);
+		logger.debug("{} actions in total have been evaluated this turn", totalActionCount); // evaluate过的action总数，有什么用呢？
 		logger.debug("Selecting best action {} with score {}", bestAction, bestScore);
 		heuristic.onActionSelected(context, player.getId());
 

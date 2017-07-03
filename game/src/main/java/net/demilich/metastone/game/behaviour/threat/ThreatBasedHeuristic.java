@@ -41,9 +41,9 @@ public class ThreatBasedHeuristic implements IGameStateHeuristic {
 		for (Minion minion : opponent.getMinions()) {
 			damageOnBoard += minion.getAttack() * minion.getAttributeValue(Attribute.NUMBER_OF_ATTACKS);
 		}
-		damageOnBoard += getHeroDamage(opponent.getHero());
+		damageOnBoard += getHeroDamage(opponent.getHero());  //对方随从 + 英雄的攻击力
 
-		int remainingHp = player.getHero().getEffectiveHp() - damageOnBoard;
+		int remainingHp = player.getHero().getEffectiveHp() - damageOnBoard;  // 根据减去对方伤害后我方剩余血量来确定威胁等级：红、黄、绿
 		if (remainingHp < 1) {
 			return ThreatLevel.RED;
 		} else if (remainingHp < 15) {
@@ -84,12 +84,12 @@ public class ThreatBasedHeuristic implements IGameStateHeuristic {
 		if (minion.hasAttribute(Attribute.MARKED_FOR_DEATH)) {
 			return 0;
 		}
-		double minionScore = weights.get(WeightedFeature.MINION_INTRINSIC_VALUE);
-		minionScore += weights.get(WeightedFeature.MINION_ATTACK_FACTOR)
+		double minionScore = weights.get(WeightedFeature.MINION_INTRINSIC_VALUE);  // 一个随从的基础得分
+		minionScore += weights.get(WeightedFeature.MINION_ATTACK_FACTOR)  // 随从攻击力得分
 				* (minion.getAttack() - minion.getAttributeValue(Attribute.TEMPORARY_ATTACK_BONUS));
-		minionScore += weights.get(WeightedFeature.MINION_HP_FACTOR) * minion.getHp();
+		minionScore += weights.get(WeightedFeature.MINION_HP_FACTOR) * minion.getHp(); // 随从血量得分
 
-		if (minion.hasAttribute(Attribute.TAUNT)) {
+		if (minion.hasAttribute(Attribute.TAUNT)) {   // 随从嘲讽技能得分 （根据对方整体威胁等级不同对应不同数值）
 			switch (threatLevel) {
 			case RED:
 				minionScore += weights.get(WeightedFeature.MINION_RED_TAUNT_MODIFIER);
@@ -102,7 +102,7 @@ public class ThreatBasedHeuristic implements IGameStateHeuristic {
 				break;
 			}
 		}
-
+		// 随从的其他各种技能或效果得分（如风怒、圣盾、法术伤害、秘密行动、不可被攻击）
 		if (minion.hasAttribute(Attribute.WINDFURY)) {
 			minionScore += weights.get(WeightedFeature.MINION_WINDFURY_MODIFIER);
 		} else if (minion.hasAttribute(Attribute.MEGA_WINDFURY)) {
@@ -138,7 +138,7 @@ public class ThreatBasedHeuristic implements IGameStateHeuristic {
 		}
 		double score = 0;
 
-		ThreatLevel threatLevel = calcuateThreatLevel(context, playerId);
+		ThreatLevel threatLevel = calcuateThreatLevel(context, playerId);  //计算对方威胁等级，从score中减去一定数值
 		switch (threatLevel) {
 		case RED:
 			score += weights.get(WeightedFeature.RED_MODIFIER);
@@ -149,22 +149,22 @@ public class ThreatBasedHeuristic implements IGameStateHeuristic {
 		default:
 			break;
 		}
-		score += player.getHero().getEffectiveHp() * weights.get(WeightedFeature.OWN_HP_FACTOR);
+		score += player.getHero().getEffectiveHp() * weights.get(WeightedFeature.OWN_HP_FACTOR);  // 加上和减去自身和对方血量乘以一定系数
 		score += opponent.getHero().getEffectiveHp() * weights.get(WeightedFeature.OPPONENT_HP_FACTOR);
 		for (Card card : player.getHand()) {
 			if (isHardRemoval(card)) {
-				score += weights.get(WeightedFeature.HARD_REMOVAL_VALUE);
+				score += weights.get(WeightedFeature.HARD_REMOVAL_VALUE);   // 对于HARD_REMOVAL_VALUE性质手牌，加上一定数值
 			}
 		}
 
-		score += player.getHand().getCount() * weights.get(WeightedFeature.OWN_CARD_COUNT);
+		score += player.getHand().getCount() * weights.get(WeightedFeature.OWN_CARD_COUNT);  // 加上和减去自身和对方手牌数乘以一定系数
 		score += opponent.getHand().getCount() * weights.get(WeightedFeature.OPPONENT_CARD_COUNT);
 
-		for (Minion minion : player.getMinions()) {
+		for (Minion minion : player.getMinions()) {     // 加上己方随从的score
 			score += calculateMinionScore(minion, threatLevel);
 		}
 
-		for (Minion minion : opponent.getMinions()) {
+		for (Minion minion : opponent.getMinions()) {   // 减去对方随从的score
 			score -= calculateMinionScore(minion, threatLevel);
 		}
 

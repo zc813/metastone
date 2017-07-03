@@ -3,6 +3,9 @@ package net.demilich.metastone.game.behaviour.human;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.demilich.metastone.BuildConfig;
 import net.demilich.metastone.GameNotification;
 import net.demilich.metastone.NotificationProxy;
@@ -14,6 +17,8 @@ import net.demilich.metastone.game.behaviour.Behaviour;
 import net.demilich.metastone.game.cards.Card;
 
 public class HumanBehaviour extends Behaviour implements IActionSelectionListener {
+
+	private final static Logger logger = LoggerFactory.getLogger(HumanBehaviour.class);
 
 	private GameAction selectedAction;
 	private boolean waitingForInput;
@@ -49,6 +54,9 @@ public class HumanBehaviour extends Behaviour implements IActionSelectionListene
 
 	@Override
 	public GameAction requestAction(GameContext context, Player player, List<GameAction> validActions) {
+		// Sjx, output info
+		logger.info("num of valid actions {}, they are {}.", validActions.size(), validActions);
+
 		waitingForInput = true;
 		HumanActionOptions options = new HumanActionOptions(this, context, player, validActions);
 		NotificationProxy.sendNotification(GameNotification.HUMAN_PROMPT_FOR_ACTION, options);

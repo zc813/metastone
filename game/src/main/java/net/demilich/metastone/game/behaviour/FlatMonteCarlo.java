@@ -22,7 +22,7 @@ public class FlatMonteCarlo extends Behaviour {
 		this.iterations = iterations;
 	}
 
-	private GameAction getBestAction(HashMap<GameAction, Double> actionScores) {
+	private GameAction getBestAction(HashMap<GameAction, Double> actionScores) {  //遍历hashmap获取score最高的action
 		GameAction bestAction = null;
 		double bestScore = Integer.MIN_VALUE;
 		for (GameAction actionEntry : actionScores.keySet()) {
@@ -54,10 +54,10 @@ public class FlatMonteCarlo extends Behaviour {
 
 	private int playRandomUntilEnd(GameContext simulation, int playerId) {
 		for (Player player : simulation.getPlayers()) {
-			player.setBehaviour(new PlayRandomBehaviour());
+			player.setBehaviour(new PlayRandomBehaviour());  // 双方都随机play
 		}
-		simulation.playFromState();
-		return simulation.getWinningPlayerId() == playerId ? 1 : 0;
+		simulation.playFromState();  //一直打，直到结束
+		return simulation.getWinningPlayerId() == playerId ? 1 : 0;  //我方获胜返回1，对方获胜返回0
 	}
 
 	@Override
@@ -67,23 +67,23 @@ public class FlatMonteCarlo extends Behaviour {
 		}
 		HashMap<GameAction, Double> actionScores = new HashMap<>();
 		for (GameAction gameAction : validActions) {
-			double score = simulate(context, player.getId(), gameAction);
-			actionScores.put(gameAction, score);
+			double score = simulate(context, player.getId(), gameAction);  // 通过蒙特卡洛simulation一定局数（100）来评估一个action的得分，每个候选action随机play的局数都一样
+			actionScores.put(gameAction, score);						// 没有min-max搜索的过程，也没有UCB计算分支评分的过程，只看当前状态下的validaction这一层分支，不再考虑下一层
 			logger.debug("Action {} gets score of {}", gameAction.getActionType(), score);
 
 		}
-		GameAction bestAction = getBestAction(actionScores);
+		GameAction bestAction = getBestAction(actionScores);  // 选择执行之后随机对局胜利局数多的那个候选action
 		return bestAction;
 	}
 
 	private double simulate(GameContext context, int playerId, GameAction action) {
 		GameContext simulation = context.clone();
-		simulation.getLogic().performGameAction(simulation.getActivePlayer().getId(), action);
+		simulation.getLogic().performGameAction(simulation.getActivePlayer().getId(), action); // 在clone出来的context中执行action
 		if (simulation.gameDecided()) {
-			return simulation.getWinningPlayerId() == playerId ? 1 : 0;
+			return simulation.getWinningPlayerId() == playerId ? 1 : 0;  // 如果执行完action之后比赛马上结束，则我方获胜返回1，否则返回0
 		}
 		double score = 0;
-		for (int i = 0; i < iterations; i++) {
+		for (int i = 0; i < iterations; i++) {  //从当前局面开始随机对局一定局数直到结束，以其中胜利的局数作为score
 			score += playRandomUntilEnd(simulation.clone(), playerId);
 		}
 		return score;

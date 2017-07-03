@@ -2,7 +2,8 @@ package net.demilich.metastone.game.behaviour.mcts;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.demilich.metastone.game.GameContext;
 import net.demilich.metastone.game.Player;
@@ -12,12 +13,12 @@ import net.demilich.metastone.game.cards.Card;
 
 public class MonteCarloTreeSearch extends Behaviour {
 
-	//private final static Logger logger = LoggerFactory.getLogger(MonteCarloTreeSearch.class);
+	private final static Logger logger = LoggerFactory.getLogger(MonteCarloTreeSearch.class);
 
 	private static final int ITERATIONS = 500;
 
 	@Override
-	public String getName() {
+	public String getName() {  // 这个似乎还没有完整实现，没法跑， Node.process() 报NullPointer Exception
 		return "MCTS";
 	}
 
@@ -35,7 +36,7 @@ public class MonteCarloTreeSearch extends Behaviour {
 	@Override
 	public GameAction requestAction(GameContext context, Player player, List<GameAction> validActions) {
 		if (validActions.size() == 1) {
-			// logger.info("MCTS selected best action {}", validActions.get(0));
+			logger.info("MCTS selected best action {}", validActions.get(0));
 			return validActions.get(0);
 		}
 		Node root = new Node(null, player.getId());
@@ -45,7 +46,7 @@ public class MonteCarloTreeSearch extends Behaviour {
 			root.process(treePolicy);
 		}
 		GameAction bestAction = root.getBestAction();
-		// logger.info("MCTS selected best action {}", bestAction);
+		logger.info("MCTS selected best action {}", bestAction);
 		return bestAction;
 	}
 

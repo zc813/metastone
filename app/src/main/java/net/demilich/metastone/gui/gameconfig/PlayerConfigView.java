@@ -16,14 +16,14 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
-import net.demilich.metastone.game.behaviour.GreedyOptimizeMove;
-import net.demilich.metastone.game.behaviour.IBehaviour;
-import net.demilich.metastone.game.behaviour.NoAggressionBehaviour;
-import net.demilich.metastone.game.behaviour.PlayRandomBehaviour;
+import net.demilich.metastone.game.behaviour.*;
+import net.demilich.metastone.game.behaviour.heuristic.SupervisedLinearHeuristic;
 import net.demilich.metastone.game.behaviour.heuristic.WeightedHeuristic;
 import net.demilich.metastone.game.behaviour.human.HumanBehaviour;
+import net.demilich.metastone.game.behaviour.threat.FeatureVector;
 import net.demilich.metastone.game.behaviour.threat.GameStateValueBehaviour;
-import net.demilich.metastone.game.behaviour.FlatMonteCarlo;
+import net.demilich.metastone.game.behaviour.mcts.MonteCarloTreeSearch;  // by sjx
+import net.demilich.metastone.game.behaviour.threat.ThreatBasedHeuristic; // by sjx
 import net.demilich.metastone.game.cards.Card;
 import net.demilich.metastone.game.cards.CardCatalogue;
 import net.demilich.metastone.game.cards.HeroCard;
@@ -169,8 +169,12 @@ public class PlayerConfigView extends VBox {
 		behaviourList.add(new PlayRandomBehaviour());
 
 		behaviourList.add(new GreedyOptimizeMove(new WeightedHeuristic()));
-		behaviourList.add(new NoAggressionBehaviour());
+		behaviourList.add(new GreedyOptimizeMoveLinear(new SupervisedLinearHeuristic()));  // add by sjx, 尝试监督学习局面评估函数
+//		behaviourList.add(new NoAggressionBehaviour());
 		behaviourList.add(new FlatMonteCarlo(100));
+//		behaviourList.add(new MonteCarloTreeSearch());
+		behaviourList.add(new GreedyOptimizeTurn(new WeightedHeuristic()));
+//		behaviourList.add(new GreedyOptimizeTurn(new ThreatBasedHeuristic(FeatureVector.getDefault()))); // 运行会出错，原因不明
 
 		behaviourBox.setItems(behaviourList);
 		behaviourBox.valueProperty().addListener(this::onBehaviourChanged);

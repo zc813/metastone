@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 
+import net.demilich.metastone.game.cards.CardType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -446,15 +447,20 @@ public class GameContext implements Cloneable, IDisposable {
 	public void play() {
 		logger.debug("Game starts: " + getPlayer1().getName() + " VS. " + getPlayer2().getName());
 		init();
-		while (!gameDecided()) {
-			startTurn(activePlayer);
-			while (playTurn()) {}
+		while (!gameDecided()) {  // 如果游戏胜负未分，开始切换后的activePlayer的turn
+			startTurn(activePlayer);  // 开始当前activePlayer的Turn
+			while (playTurn()) {}    // 循环play，直到执行END_TURN action，结束当前player的当前turn （主要是调用behaviour的requestAction）
+			// add by sjx, 获取每一回合结束时的环境信息
+//			logger.info("Data: {}", this.toString());
+			logger.info(this.contextInfoStr());
 			if (getTurn() > GameLogic.TURN_LIMIT) {
 				break;
 			}
 		}
 		endGame();
-
+		// add by sjx
+		logger.info("{'GameHash':" + hashCode() + ",'Turn':" + turn + ",'winner':" + winner.getId() + "}");
+//		logger.info("{Game finished after " + turn + " turns, the winner is: " + winner.getId());
 	}
 
 	public void playFromState(){
@@ -575,6 +581,65 @@ public class GameContext implements Cloneable, IDisposable {
 		turnState = TurnState.TURN_IN_PROGRESS;
 	}
 
+	public String contextInfoStr(){
+		// 将我们希望提取的环境信息表示成格式化字符串
+		StringBuilder builder = new StringBuilder("{'GameHash':" + hashCode() + ",'Turn':" + getTurn());
+
+		for (Player player : players){
+			builder.append(",'player" + player.getId() + "':'");
+			builder.append(player.getHero().getHp());  // 血量
+			builder.append("|" + player.getMana());  // 当前法力值
+			builder.append("|" + player.getMaxMana()); // 当前最大法力值
+			builder.append("|" + player.getHero().getArmor()); // 护甲
+
+			// 场上的随从相关数据
+			int summonCount = 0;   // minions on board that can still attack (直观来说，一回合结束时，自己场上应该不会再有能攻击的随从还没用的情况)
+			int summonAttack = 0;
+			int summonHp = 0;
+			int summonCountNot = 0; // minions on board that can not attack
+			int summonAttackNot = 0;
+			int summonHpNot = 0;
+			for (Summon summon : player.getSummons()) {   // 场上的随从信息, 暂时只考虑攻击力和血量，跑通流程，各种特殊效果后面补充
+				if (summon.canAttackThisTurn()) {
+					summonCount += 1;
+					summonAttack += summon.getAttack();
+					summonHp += summon.getHp();
+				} else {
+					summonCountNot += 1;
+					summonAttackNot += summon.getAttack();
+					summonHpNot += summon.getHp();
+				}
+			}
+			builder.append("|" + summonCount + "|" + summonAttack + "|" + summonHp);
+			builder.append("|" + summonCountNot + "|" + summonAttackNot + "|" + summonHpNot);
+
+			// 手牌相关信息
+			int cardMinionCount = 0;
+			int cardMinionMana = 0;
+			int cardMinionBattleCry = 0;
+			int cardSpellCount = 0;
+			int cardSpellMana = 0;
+			for (Card card : player.getHand()) {
+				if (card.getCardType() == CardType.MINION) {
+					cardMinionCount += 1;
+					cardMinionMana += card.getBaseManaCost();
+					if (card.hasBattlecry()) {
+						cardMinionBattleCry += 1;
+					}
+				} else {  // 除了Spell法术牌以外，其实还有 CHOOSE_ONE 等其他手牌类型，但目前暂时不考虑
+					cardSpellCount += 1;
+					cardSpellMana += card.getBaseManaCost();
+				}
+			}
+			builder.append("|" + cardMinionCount + "|" + cardMinionMana + "|" + cardMinionBattleCry);
+			builder.append("|" + cardSpellCount + "|" + cardSpellMana);
+
+			builder.append("'");
+		}
+		builder.append('}');
+		return builder.toString();
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder("GameContext hashCode: " + hashCode() + "\nPlayer: ");
@@ -585,22 +650,22 @@ public class GameContext implements Cloneable, IDisposable {
 			builder.append('/');
 			builder.append(player.getMaxMana());
 			builder.append(" HP: ");
-			builder.append(player.getHero().getHp() + "(" + player.getHero().getArmor() + ")");
+			builder.append(player.getHero().getHp() + "(" + player.getHero().getArmor() + ")");  // 血量和护甲
 			builder.append('\n');
 			builder.append("Behaviour: " + player.getBehaviour().getName() + "\n");
 			builder.append("Minions:\n");
-			for (Summon summon : player.getSummons()) {
+			for (Summon summon : player.getSummons()) {   // 场上的随从
 				builder.append('\t');
 				builder.append(summon);
 				builder.append('\n');
 			}
-			builder.append("Cards (hand):\n");
+			builder.append("Cards (hand):\n");   // 手里的牌
 			for (Card card : player.getHand()) {
 				builder.append('\t');
 				builder.append(card);
 				builder.append('\n');
 			}
-			builder.append("Secrets:\n");
+			builder.append("Secrets:\n");   // 秘密
 			for (String secretId : player.getSecrets()) {
 				builder.append('\t');
 				builder.append(secretId);

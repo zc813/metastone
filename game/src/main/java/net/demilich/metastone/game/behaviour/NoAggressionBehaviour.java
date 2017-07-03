@@ -13,7 +13,7 @@ public class NoAggressionBehaviour extends Behaviour {
 
 	@Override
 	public String getName() {
-		return "No Aggression";
+		return "No Aggression";  // 这是一个完全不进攻的策略，一直召唤随从（如果可以的话），没有可召唤的就End Turn
 	}
 
 	@Override
@@ -27,11 +27,11 @@ public class NoAggressionBehaviour extends Behaviour {
 			return validActions.get(0);
 		}
 		for (GameAction gameAction : validActions) {
-			if (gameAction.getActionType() == ActionType.SUMMON) {
+			if (gameAction.getActionType() == ActionType.SUMMON) {  // 如果有可以召唤的随从就召唤
 				return gameAction;
 			}
 		}
-		return validActions.get(validActions.size() - 1);
+		return validActions.get(validActions.size() - 1);  // 没有随从可以召唤就返回最后一个valid action （好像是EndTurn，也就是结束出牌）
 	}
 
 }
