@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.demilich.metastone.NotificationProxy;
 import net.demilich.metastone.game.behaviour.heuristic.SupervisedLinearHeuristic;
+import net.demilich.metastone.game.behaviour.heuristic.SupervisedModelHeuristic;
 import net.demilich.metastone.trainingmode.RequestTrainingDataNotification;
 import net.demilich.metastone.trainingmode.TrainingData;
 import org.slf4j.Logger;
@@ -29,6 +30,7 @@ public class GameStateValueBehaviour extends Behaviour {
 
 	public GameStateValueBehaviour() {
 //		this.heuristic = new SupervisedLinearHeuristic();  // test by sjx, 替换GameStateValue中使用的局面评估函数
+//		this.heuristic = new SupervisedModelHeuristic();
 	}
 
 	public GameStateValueBehaviour(FeatureVector featureVector, String nameSuffix) {

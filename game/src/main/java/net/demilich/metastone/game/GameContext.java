@@ -452,14 +452,14 @@ public class GameContext implements Cloneable, IDisposable {
 			while (playTurn()) {}    // 循环play，直到执行END_TURN action，结束当前player的当前turn （主要是调用behaviour的requestAction）
 			// add by sjx, 获取每一回合结束时的环境信息
 //			logger.info("Data: {}", this.toString());
-			logger.info(this.contextInfoStr());
+//			logger.info(this.contextInfoStr());
 			if (getTurn() > GameLogic.TURN_LIMIT) {
 				break;
 			}
 		}
 		endGame();
 		// add by sjx
-		logger.info("{'GameHash':" + hashCode() + ",'Turn':" + turn + ",'winner':" + winner.getId() + "}");
+//		logger.info("{'GameHash':" + hashCode() + ",'Turn':" + turn + ",'winner':" + winner.getId() + "}");
 //		logger.info("{Game finished after " + turn + " turns, the winner is: " + winner.getId());
 	}
 
