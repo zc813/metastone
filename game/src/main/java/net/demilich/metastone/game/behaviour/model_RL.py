@@ -19,7 +19,9 @@ Created on Wed Jun 28 17:08:13 2017
 2. 只根据最后胜负结果，指定reward为1或-1， 在对random player的训练时胜率似乎也能慢慢提升，相对较慢，
 
 2017-07-12 发现 ReplayQLearning中的evaluateContext存在的没有使用环境中最新player状态的重大bug， 之前结果没有意义，需要重新实验
-1. 
+1. 暂时依然没有发现学习迹象
+
+可以尝试用Sarsa的方式构造数据 Sutton P230
 """
 
 import os
@@ -47,9 +49,9 @@ else:
 if os.path.exists(model_file):
 #    mlp = joblib.load(model_file)
     mlp = pickle.load(open(model_file, 'rb'))
-#    mlp.set_params(learning_rate_init=0.0001)  #尝试减小更新步子
+    mlp.set_params(learning_rate_init=0.0002)  #尝试减小更新步子
 else:
-    mlp = MLPRegressor(hidden_layer_sizes=(5,), learning_rate_init=1e-4, tol=1e-4, random_state=3)
+    mlp = MLPRegressor(hidden_layer_sizes=(5,), learning_rate_init=2e-4, tol=1e-6, random_state=3)
 
 def get_discounted_data(data_dict, final_hp_diff, total_turn, final_env_state):
     """提取完整一局的特征数据和对应标签
@@ -98,7 +100,7 @@ def load_data(file_name, data_type):
 
 if __name__ == '__main__':
     
-    data_type = 2
+    data_type = 1
     load_data(data_file, data_type)
     # 清空report.log
     with open(data_file, 'w') as f:
