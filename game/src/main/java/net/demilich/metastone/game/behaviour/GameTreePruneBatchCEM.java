@@ -1,26 +1,24 @@
 package net.demilich.metastone.game.behaviour;
 
-import net.demilich.metastone.game.Attribute;
 import net.demilich.metastone.game.GameContext;
 import net.demilich.metastone.game.Player;
+import net.demilich.metastone.game.actions.ActionType;
 import net.demilich.metastone.game.actions.GameAction;
+import net.demilich.metastone.game.behaviour.heuristic.IGameStateHeuristic;
 import net.demilich.metastone.game.cards.Card;
 import net.demilich.metastone.game.entities.heroes.Hero;
 import net.demilich.metastone.game.entities.heroes.HeroClass;
 import net.demilich.metastone.game.entities.minions.Minion;
-import net.demilich.metastone.game.logic.GameLogic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-// 尝试直接使用CEM (Noisy Cross Entropy Method) 方法优化Linear value function中的参数
-// 相对于Linear CEM中优化一局结束时的HpDiff， Linear Batch CEM中以优化一个batch的对局的胜率为目标
-// 也就是说一组参数下跑batch局，以这组参数和这batch局的胜率作为一个样本
+// 尝试直接使用CEM (Noisy Cross Entropy Method) 方法优化Linear value function中的参数, 但现在会往前多步后评估局面，而不是GreedyBest
 
-public class LinearBatchCEM extends Behaviour {
+public class GameTreePruneBatchCEM extends Behaviour {
 
-	private final static Logger logger = LoggerFactory.getLogger(LinearBatchCEM.class);
+	private final static Logger logger = LoggerFactory.getLogger(GameTreePruneBatchCEM.class);
 	private Random random = new Random();
 	private final static int feaNum = 88;
 	private static double[] parMean = new double[feaNum];
@@ -32,17 +30,17 @@ public class LinearBatchCEM extends Behaviour {
 	private static int batchCount = 0;
 	private static int batchWinCnt = 0;
 	private static int iterNum = 0;
-	private final static int batchSize = 50;
+	private final static int batchSize = 40;
 	private final static int updateBatchSize = 20;
 	private final static double topRatio = 0.25;
+	private final static int maxNumMoveSearched = 6;
+	private final IGameStateHeuristic heuristic;
 
 	// 初始化par均值
-	double[] coef0 = {-0.042435191603752365, 0.40616696103829747, -0.6076077508888231, 0.7272720043082649, 0.20202105394258138, 0.6313194790542382, 0.018128759542628426, -0.6714877445764238, -1.4053075565764823, -0.5645665894497521, 0.7847370830575832, 0.6027815061309918, 0.11944932690773696, 0.16639617889671887, -0.596884142191235, -1.303442871303662, -0.7689279203049311, 0.08684843915912507, 0.2194776555521321, 0.3016746685481717, 1.2937229089380362, -0.3867675424274616, 0.1076755527545435, -0.2732232995785765, -1.2185303120526827, 0.44953477632896055, 0.4381595843767112, -0.42740268057811853, -0.7593509953652382, -0.25454178333555133, -0.06777467174623754, -0.29690084326922533, 0.139006279981216, -0.19757466435610388, -0.10281368164119024, -1.0318842806816224, 0.6697091092076944, -1.5504887549148079, -0.46513049548185065, -0.224168675085325, 0.3363897344845124, 1.0077572813673379, 1.790712443198513, -0.7974532011373017, -0.034379835513210874, -0.53728431299419, 0.27911211300832656, 1.77296275442259, -0.49676110743592145, 0.1543295718827667, -0.8465960481972349, 0.7616942260912617, -0.09467554276581093, -2.0242808280175053, -0.42044884895501194, 0.22098060325157623, -0.7124548934850738, -0.46505479523846677, 0.48943013064063173, -1.0814450906779396, 1.494202436696506, -0.2253465154462635, -0.45375551865466784, 0.23376970921025383, -0.31330715778322343, -0.36119276257174077, -0.643335795514266, -9.750616593995213E-4, 0.38910933337215503, 0.09884268820871578, 0.37335447500509883, 0.8047764493080031, -0.4720077472112548, 0.264490464098162, 0.4104466046033848, -1.3686731855897478, -0.3840621668768126, 1.0668114179340098, 0.2664341808467372, -0.9317865799520276, 0.7754792723230315, 0.23662829519630627, -0.4460817116862948, -0.010734604936549205, 0.08007887984653188, -0.7490589136711456, 0.32186845493246313, 1.4714419204754288};
+	double[] coef0 = {0.760326412267397, 1.0589083919017865, -0.9400597870303837, 1.8744045092345258, 0.40236541366111334, 0.7418310137683413, 0.484131665708331, -0.7552493510082674, -0.49584676055695726, -0.16698138431239073, 0.36754468394420575, 1.4864556790810401, 1.1277694490216241, -0.19385547308776607, -1.0543152353607872, -0.2839165182591483, -1.4812832356356582, 0.3152121620740715, 0.0576844177240588, 1.1548436693125355, 1.9800036654926079, -0.3901963327635122, -0.7253225619942502, 0.18436967723674624, -0.6734730405335783, 0.5670641396548124, 0.639198399863008, -2.323129891333293, -1.0595513754902268, -0.804768708781494, 0.049672910287548194, 0.45954962674589844, -1.2431053666129253, 1.453612258307805, 0.26218920504452126, -2.0395371675289904, 0.18812695989268322, -1.328556982125309, -0.09499834083064819, -1.3747489091708807, 0.4488316541321531, 1.557497817592364, 1.0913026067029423, -0.597424707768485, -0.8361789076762033, -0.30777376598675443, -0.12238371097680156, 1.5841665240946965, -1.6267115776236394, -0.8061619411443898, -0.6975022521655243, 0.8245686938375283, -0.1718025408001051, -1.965065224429499, -1.59218011905894, 0.5600873334680981, -0.1825971189270253, -0.584501980650917, 2.416352484932763, -0.994680624848772, 1.9001580351986664, 0.11200461958090441, -1.149550315376586, 0.08082039517078825, -0.16580058883653237, -1.571984435874137, -2.4570940338800336, -0.15228687237889565, -0.1436000925996575, -0.06952984168734147, 0.8184547686840771, 0.6615721068181535, -0.2850074919127527, 0.16685275047289128, -0.01777378273904684, -1.705839086129454, -0.22775080851185345, 1.740876345330731, 0.2765548960828773, -0.3556647399330023, 0.4369754630045146, 0.679533140719245, 0.7003181586567979, 0.3695026344221172, -0.45705065513923954, -0.5747965912920181, 1.4643969249437774, 3.3167090234141243};
 
-	// iterNum=16, bestPara 50/50 vs GreedyBestMove (使用 Wild pirate warrior卡组进行训练，针对默认GreedyBestMove，Greedy 模型 ##########################)
-//	double[] coef0 = {-0.292840715614615, 0.20101831923661426, -3.39143378499341, 1.9875259555880256, 0.38243094977445563, 0.19916580778656684, 0.39681845708944546, -0.1516207831858801, -1.3270806070142345, -0.8516608373607158, 1.1691499563044714, 1.7037675238382644, 0.26375688433025735, 0.6041754222325952, -1.2228269800621305, -0.04841372741594877, -0.42730972024890057, 0.5378274791604805, -1.0610676568848123, 1.5419236540282981, 0.8025786326886725, -0.5998843281736796, 0.5881743466572328, -0.04764287832761427, 0.2743675479019204, -0.2555714125323206, 0.6015742978414451, 0.959379920060044, -1.0280270764615334, -0.24687565888405189, 0.41578079075524416, -0.9403436227526668, -0.7232215629677738, -1.4544950831523629, -0.07337021103468366, -1.7957986080880892, -1.0615903113568188, -0.9677261770565323, -0.9900926846614896, -1.9467941633472445, -0.38968317406040387, 1.18108807301559, 2.2933042007465785, -0.7707815457180169, -0.5453742461725655, -2.1452134837607604, 0.4673601618824798, 2.3374173897171233, -0.532213458145435, 0.3020731393119615, -1.0703121445039732, 0.5722946167284809, -1.12636070861931, -2.905239343653205, -1.2570275089835006, 0.5180962966398064, 0.1545759621733422, -1.1689272645244264, 0.8409561108467435, -0.2651722876271211, 2.361775722446801, -0.8082739582714793, -0.7465872641805845, -0.9966536644382684, 2.912971532256444, 1.3543455372968578, 0.30616915666047656, -0.9915720231492012, 0.9276192616927182, -0.4280058490330962, 1.4060304457970378, 2.1048133236115314, -0.055023043380736214, -0.14489618269988702, 0.10741416798829515, -1.4163208108087157, -1.1061911758530445, 2.153649561244002, 0.7136525008272323, -0.9008286327709033, 2.464534971036488, 0.13531159446449426, 0.40349749765912607, -5.283467693679954E-4, 0.10380815509947951, -0.3747210306190661, 0.1738684930251086, 1.533762114780188};
-
-	public LinearBatchCEM() {
+	public GameTreePruneBatchCEM(IGameStateHeuristic heuristic) {
+		this.heuristic = heuristic;
 		for(int i=0; i<feaNum; i++){
 			parMean[i] = coef0[i]; //2*random.nextDouble() - 1;
 			parVar[i] = 0.25;
@@ -52,18 +50,23 @@ public class LinearBatchCEM extends Behaviour {
 
 	@Override
 	public String getName() {
-		return "CEM-Batch-Linear";
+		return "CEM-Batch-Tree-Prune";
 	}
 
 	@Override
 	public List<Card> mulligan(GameContext context, Player player, List<Card> cards) {
 		List<Card> discardedCards = new ArrayList<Card>();
 		for (Card card : cards) {
-			if (card.getBaseManaCost() >= 4) {  //耗法值>=4的不要
+			if (card.getBaseManaCost() >= 4 || card.getCardId()=="minion_patches_the_pirate") {  //耗法值>=4的不要, Patches the Pirate这张牌等他被触发召唤
 				discardedCards.add(card);
 			}
 		}
 		return discardedCards;
+	}
+
+	private GameContext simulateAction(GameContext simulation, int playerId, GameAction action) {
+		simulation.getLogic().performGameAction(playerId, action);   // 在simulation GameContext中执行action，似乎是获取logic模块来执行action的
+		return simulation;
 	}
 
 	@Override
@@ -73,29 +76,70 @@ public class LinearBatchCEM extends Behaviour {
 			return validActions.get(0);
 		}
 
-		// get best action at the current state and the corresponding Q-score
-		GameAction bestAction = validActions.get(0);
-		double bestScore = Double.NEGATIVE_INFINITY;
-		for (GameAction gameAction : validActions) {
-			GameContext simulationResult = simulateAction(context.clone(), player, gameAction);  //假设执行gameAction，得到之后的game context
-			double gameStateScore = evaluateContext(simulationResult, player.getId());  //heuristic.getScore(simulationResult, player.getId());	     //heuristic评估执行gameAction之后的游戏局面的分数
-			if (gameStateScore > bestScore) {		// 记录得分最高的action
-				bestScore = gameStateScore;
-				bestAction = gameAction;
+		int depth = 6;
+		// when evaluating battlecry and discover actions, only optimize the immediate value （两种特殊的action）
+		if (validActions.get(0).getActionType() == ActionType.BATTLECRY) {
+			depth = 0;
+		} else if (validActions.get(0).getActionType() == ActionType.DISCOVER) {  // battlecry and discover actions一定会在第一个么？
+			return validActions.get(0);
+		}
+
+		SortedMap<Double, GameAction> scoreActionMap = new TreeMap<>(Comparator.reverseOrder());
+		for (GameAction gameAction : validActions) {  // 遍历validactions，使用Linear评估函数评估得到的局面，并按得分降序排列
+			GameContext simulationResult = simulateAction(context.clone(), player.getId(), gameAction);  //假设执行gameAction，得到之后的game context
+			double gameStateScore = evaluateContext(simulationResult, player.getId()); //heuristic.getScore(simulationResult, player.getId());	     //heuristic评估执行gameAction之后的游戏局面的分数
+			if(!scoreActionMap.containsKey(gameStateScore)){  // 注意：暂时简单的认为gameStateScore相同的两个simulationResult context一样，只保留第一个simulationResult对应的action
+				scoreActionMap.put(gameStateScore, gameAction);
 			}
 			simulationResult.dispose();  //GameContext环境每次仿真完销毁
 		}
 
+		GameAction bestAction = validActions.get(0);
+		double bestScore = Double.NEGATIVE_INFINITY;
+		int k = 0;
+		for(GameAction gameAction: scoreActionMap.values()){
+			double score = alphaBeta(context, player.getId(), gameAction, depth);  // 对每一个可能action，使用alphaBeta递归计算得分
+			if (score > bestScore) {
+				bestAction = gameAction;
+				bestScore = score;
+			}
+			k += 1;
+			if(k >= maxNumMoveSearched){
+				break;
+			}
+		}
 		return bestAction;
 	}
 
-	private GameContext simulateAction(GameContext simulation, Player player, GameAction action) {
-		GameLogic.logger.debug("");
-		GameLogic.logger.debug("********SIMULATION starts********** " + simulation.getLogic().hashCode());
-		simulation.getLogic().performGameAction(player.getId(), action);   // 在simulation GameContext中执行action，似乎是获取logic模块来执行action的
-		GameLogic.logger.debug("********SIMULATION ends**********");
-		GameLogic.logger.debug("");
-		return simulation;
+	private double alphaBeta(GameContext context, int playerId, GameAction action, int depth) {
+		GameContext simulation = context.clone();  // clone目前环境
+		simulation.getLogic().performGameAction(playerId, action);  // 在拷贝环境中执行action
+		if (depth == 0 || simulation.getActivePlayerId() != playerId || simulation.gameDecided()) {  // depth层递归结束、发生玩家切换（我方这轮打完了）或者比赛结果已定时，返回score
+			return evaluateContext(simulation, playerId);
+		}
+
+		List<GameAction> validActions = simulation.getValidActions();  //执行完一个action之后，获取接下来可以执行的action
+
+		SortedMap<Double, GameAction> scoreActionMap = new TreeMap<>(Comparator.reverseOrder());
+		for (GameAction gameAction : validActions) {  // 遍历validactions，使用Linear评估函数评估得到的局面，并按得分降序排列
+			GameContext simulationResult = simulateAction(simulation.clone(), playerId, gameAction);  //假设执行gameAction，得到之后的game context
+			double gameStateScore = evaluateContext(simulationResult, playerId); //heuristic.getScore(simulationResult, playerId);	     //heuristic评估执行gameAction之后的游戏局面的分数
+			if(!scoreActionMap.containsKey(gameStateScore)){  // 注意：暂时简单的认为gameStateScore相同的两个simulationResult context一样，只保留第一个simulationResult对应的action
+				scoreActionMap.put(gameStateScore, gameAction);
+			}
+			simulationResult.dispose();  //GameContext环境每次仿真完销毁
+		}
+
+		double score = Float.NEGATIVE_INFINITY;
+		int k = 0;
+		for(GameAction gameAction: scoreActionMap.values()){
+			score = Math.max(score, alphaBeta(simulation, playerId, gameAction, depth - 1));  // 递归调用alphaBeta，取评分较大的
+			k += 1;
+			if (score >= 100000 || k >= maxNumMoveSearched) {
+				break;
+			}
+		}
+		return score;
 	}
 
 	private static int calculateThreatLevel(GameContext context, int playerId) {
@@ -103,9 +147,9 @@ public class LinearBatchCEM extends Behaviour {
 		Player player = context.getPlayer(playerId);
 		Player opponent = context.getOpponent(player);
 		for (Minion minion : opponent.getMinions()) {
-			damageOnBoard += minion.getAttack(); // * minion.getAttributeValue(Attribute.NUMBER_OF_ATTACKS);
+			damageOnBoard += minion.getAttack();
 		}
-		damageOnBoard += getHeroDamage(opponent.getHero());  //对方随从 + 英雄的攻击力
+		damageOnBoard += getHeroDamage(opponent.getHero());  //对方随从 + 英雄的攻击力 (暂时没有考虑风怒、冻结等的影响，因为 之前 minion.getAttributeValue(Attribute.NUMBER_OF_ATTACKS)经常得到0)
 
 		int remainingHp = player.getHero().getEffectiveHp() - damageOnBoard;  // 根据减去对方伤害后我方剩余血量来确定威胁等级
 		if (remainingHp < 1) {
@@ -229,12 +273,6 @@ public class LinearBatchCEM extends Behaviour {
 	@Override
 	public void onGameOver(GameContext context, int playerId, int winningPlayerId) {
 		// GameOver的时候会跳入这个函数
-//		Player player = context.getPlayer(playerId);
-//		Player opponent = context.getOpponent(player);
-//		List<Integer> playerState = player.getPlayerState();
-//		List<Integer> opponentState = opponent.getPlayerState();
-//		int reward = player.getHero().getHp() - opponent.getHero().getHp();
-
 		gameCount++;
 		if(playerId == winningPlayerId){
 			batchWinCnt += 1;

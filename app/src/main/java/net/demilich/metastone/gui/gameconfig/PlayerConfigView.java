@@ -172,13 +172,16 @@ public class PlayerConfigView extends VBox {
 
 		behaviourList.add(new GreedyOptimizeMove(new WeightedHeuristic()));
 		behaviourList.add(new GreedyOptimizeMoveLinear(new SupervisedLinearHeuristic()));  // add by sjx, 尝试监督学习局面评估函数
-		behaviourList.add(new GreedyOptimizeMoveModel(new SupervisedModelHeuristic()));  // add by sjx, 尝试监督学习局面评估模型，模型通过PMML文件表示
+//		behaviourList.add(new GreedyOptimizeMoveModel(new SupervisedModelHeuristic()));  // add by sjx, 尝试监督学习局面评估模型，模型通过PMML文件表示
 		behaviourList.add(new ReplayQLearningLinear(new SupervisedModelHeuristic()));  // add by sjx, 尝试QLearning学习Linear局面评估函数
 //		behaviourList.add(new SarsaMLP());  // add by sjx, 尝试sarsa学习MLP局面评估函数
-		behaviourList.add(new LinearCEM()); // add by sjx, 尝试使用CEM直接优化Linear局面评估函数
+//		behaviourList.add(new LinearCEM()); // add by sjx, 尝试使用CEM直接优化Linear局面评估函数
 		behaviourList.add(new LinearBatchCEM()); // add by sjx, 尝试使用CEM, 以一个batch的胜率为目标函数，直接优化
 		behaviourList.add(new GameTreeBatchCEM()); // add by sjx, 尝试使用Batch CEM, 结合GameTree递归搜索，来优化Linear评估模型参数
+		behaviourList.add(new GameTreePruneBatchCEM(new SupervisedLinearHeuristic())); // add by sjx, 尝试加深GameTree搜索深度进行batch CEM训练
 		behaviourList.add(new GameTreeBestMove(new SupervisedLinearHeuristic())); // add by sjx, 尝试使用CEM, 以一个batch的胜率为目标函数，直接优化GameTree
+		behaviourList.add(new GameTreePruneBestMove(new SupervisedLinearHeuristic())); // add by sjx, 尝试加深GameTree搜索深度
+
 //		behaviourList.add(new NoAggressionBehaviour());
 //		behaviourList.add(new FlatMonteCarlo(100));
 //		behaviourList.add(new MonteCarloTreeSearch());

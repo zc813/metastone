@@ -1,10 +1,14 @@
 package net.demilich.metastone.game.behaviour;
 
+import net.demilich.metastone.game.Attribute;
 import net.demilich.metastone.game.GameContext;
 import net.demilich.metastone.game.Player;
 import net.demilich.metastone.game.actions.ActionType;
 import net.demilich.metastone.game.actions.GameAction;
 import net.demilich.metastone.game.cards.Card;
+import net.demilich.metastone.game.entities.heroes.Hero;
+import net.demilich.metastone.game.entities.heroes.HeroClass;
+import net.demilich.metastone.game.entities.minions.Minion;
 import net.demilich.metastone.game.logic.GameLogic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +21,7 @@ public class GameTreeBatchCEM extends Behaviour {
 
 	private final static Logger logger = LoggerFactory.getLogger(GameTreeBatchCEM.class);
 	private Random random = new Random();
-	private final static int feaNum = 30;
+	private final static int feaNum = 88;
 	private static double[] parMean = new double[feaNum];
 	private static double[] parVar = new double[feaNum];
 	private double[] parWeight = new double[feaNum];
@@ -27,16 +31,16 @@ public class GameTreeBatchCEM extends Behaviour {
 	private static int batchCount = 0;
 	private static int batchWinCnt = 0;
 	private static int iterNum = 0;
-	private final static int batchSize = 25;
+	private final static int batchSize = 50;
 	private final static int updateBatchSize = 20;
 	private final static double topRatio = 0.25;
 
 	// 初始化par均值
-	double[] coef0 = {-0.037847876197846936, -0.5793008001169108, 0.1754385206469534, 0.1946006596220002, -0.18375281281268818, 0.07669337304029306, -0.23953339605248733, 0.1625375821028113, 0.9683292339344448, 0.44773851443668594, 0.47734256985078316, -0.21879857542089906, 0.39121568056816125, -0.6008596281153088, -0.05693259780075566, -0.2351841449032277, 0.5748925305480416, -0.3515842748443804, -1.2271003656222081, 0.13591035827512069, -1.161462138557064, 0.3489161472204509, -1.1059219462733827, -0.7285302999093869, -0.6625790473565222, -0.8504436668103094, -1.4268205997337957, 1.6023593638999283, -1.0209016644769786, 0.724077140200281};
+//	double[] coef0 = {-0.4026557850528921, -1.4777779620148956, 0.4807519990112861, 0.17256270698849252, -3.0048219754608025, 1.2471351008867102, 0.0984930660725887, 0.10428128567415333, 2.305958663224414, 1.1694585122714134, 1.6161794705279806, -1.2488627310061495, 0.7849320841015818, -0.44585583054203787, -0.5739923937489321, -0.15309219515362008, 0.10443397417923186, -1.6386810620082035, -1.5720069467333566, 1.142923451103324, -1.8273642125940401, 3.9607177425623874, -1.5590593357541482, -1.8584667661464103, -0.7176115097989136, -1.9578732692028225, -1.555219474560269, 1.260854506957219, -2.110174979376178, 0.6617734109303619};
 
 	public GameTreeBatchCEM() {
 		for(int i=0; i<feaNum; i++){
-			parMean[i] = coef0[i]; //2*random.nextDouble() - 1;
+			parMean[i] = 0.0; //coef0[i]; //2*random.nextDouble() - 1;
 			parVar[i] = 0.25;
 		}
 		updateParWeight();
@@ -51,7 +55,7 @@ public class GameTreeBatchCEM extends Behaviour {
 	public List<Card> mulligan(GameContext context, Player player, List<Card> cards) {
 		List<Card> discardedCards = new ArrayList<Card>();
 		for (Card card : cards) {
-			if (card.getBaseManaCost() >= 4) {  //耗法值>=4的不要
+			if (card.getBaseManaCost() >= 4 || card.getCardId()=="minion_patches_the_pirate") {  //耗法值>=4的不要, Patches the Pirate这张牌等他被触发召唤
 				discardedCards.add(card);
 			}
 		}
@@ -103,8 +107,42 @@ public class GameTreeBatchCEM extends Behaviour {
 				break;
 			}
 		}
-
 		return score;
+	}
+
+	private static int calculateThreatLevel(GameContext context, int playerId) {
+		int damageOnBoard = 0;
+		Player player = context.getPlayer(playerId);
+		Player opponent = context.getOpponent(player);
+		for (Minion minion : opponent.getMinions()) {
+			damageOnBoard += minion.getAttack();
+		}
+		damageOnBoard += getHeroDamage(opponent.getHero());  //对方随从 + 英雄的攻击力 (暂时没有考虑风怒、冻结等的影响，因为 之前 minion.getAttributeValue(Attribute.NUMBER_OF_ATTACKS)经常得到0)
+
+		int remainingHp = player.getHero().getEffectiveHp() - damageOnBoard;  // 根据减去对方伤害后我方剩余血量来确定威胁等级
+		if (remainingHp < 1) {
+			return 2;
+		} else if (remainingHp < 15) {
+			return 1;
+		}
+		return 0;
+	}
+
+	private static int getHeroDamage(Hero hero) {
+		int heroDamage = 0;
+		if (hero.getHeroClass() == HeroClass.MAGE) {
+			heroDamage += 1;
+		} else if (hero.getHeroClass() == HeroClass.HUNTER) {
+			heroDamage += 2;
+		} else if (hero.getHeroClass() == HeroClass.DRUID) {
+			heroDamage += 1;
+		} else if (hero.getHeroClass() == HeroClass.ROGUE) {
+			heroDamage += 1;
+		}
+		if (hero.getWeapon() != null) {
+			heroDamage += hero.getWeapon().getWeaponDamage();
+		}
+		return heroDamage;
 	}
 
 	private double evaluateContext(GameContext context, int playerId) {
@@ -118,6 +156,18 @@ public class GameTreeBatchCEM extends Behaviour {
 		}
 		List<Integer> envState = player.getPlayerState();
 		envState.addAll(opponent.getPlayerState());
+
+		// 威胁等级标识特征
+		int threatLevelHigh= 0;
+		int threatLevelMiddle = 0;
+		int threatLevel = calculateThreatLevel(context, playerId);
+		if(threatLevel == 2){
+			threatLevelHigh = 1;
+		}else if(threatLevel == 1){
+			threatLevelMiddle = 1;
+		}
+		envState.add(threatLevelHigh);
+		envState.add(threatLevelMiddle);
 
 		double score = 0;
 		for (int i = 0; i < parWeight.length; i++){
@@ -191,12 +241,6 @@ public class GameTreeBatchCEM extends Behaviour {
 	@Override
 	public void onGameOver(GameContext context, int playerId, int winningPlayerId) {
 		// GameOver的时候会跳入这个函数
-//		Player player = context.getPlayer(playerId);
-//		Player opponent = context.getOpponent(player);
-//		List<Integer> playerState = player.getPlayerState();
-//		List<Integer> opponentState = opponent.getPlayerState();
-//		int reward = player.getHero().getHp() - opponent.getHero().getHp();
-
 		gameCount++;
 		if(playerId == winningPlayerId){
 			batchWinCnt += 1;

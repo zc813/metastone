@@ -85,8 +85,8 @@ public class ThreatBasedHeuristic implements IGameStateHeuristic {
 			return 0;
 		}
 		double minionScore = weights.get(WeightedFeature.MINION_INTRINSIC_VALUE);  // 一个随从的基础得分
-		minionScore += weights.get(WeightedFeature.MINION_ATTACK_FACTOR)  // 随从攻击力得分
-				* (minion.getAttack() - minion.getAttributeValue(Attribute.TEMPORARY_ATTACK_BONUS));
+		minionScore += weights.get(WeightedFeature.MINION_ATTACK_FACTOR)
+				* (minion.getAttack() - minion.getAttributeValue(Attribute.TEMPORARY_ATTACK_BONUS)); // 随从攻击力得分
 		minionScore += weights.get(WeightedFeature.MINION_HP_FACTOR) * minion.getHp(); // 随从血量得分
 
 		if (minion.hasAttribute(Attribute.TAUNT)) {   // 随从嘲讽技能得分 （根据对方整体威胁等级不同对应不同数值）

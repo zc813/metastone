@@ -123,6 +123,7 @@ public class SimulationModeConfigView extends BorderPane implements EventHandler
 		numberOfGamesEntries.add(1000);
 		numberOfGamesEntries.add(10000);
 		numberOfGamesEntries.add(20000);
+		numberOfGamesEntries.add(40000);
 		numberOfGamesEntries.add(50000);
 		numberOfGamesEntries.add(100000);
 		numberOfGamesBox.setItems(numberOfGamesEntries);
