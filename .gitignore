@@ -12,3 +12,6 @@ classes/
 *.iml
 
 cards/src/main/resources/metastone.properties
+
+*.log
+out/
