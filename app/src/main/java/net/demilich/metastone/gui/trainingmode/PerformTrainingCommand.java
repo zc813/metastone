@@ -52,10 +52,12 @@ public class PerformTrainingCommand extends SimpleCommand<GameNotification> {
 
 					PlayerConfig learnerConfig = new PlayerConfig(config.getDeckToTrain(),
 							new GameStateValueBehaviour(fittest, "(fittest)"));
+					learnerConfig.build();
 					learnerConfig.setName("Learner");
 					Player player1 = new Player(learnerConfig);
 
 					PlayerConfig opponentConfig = new PlayerConfig(config.getRandomDeck(), new GameStateValueBehaviour());
+					opponentConfig.build();
 					opponentConfig.setName("Opponent");
 					Player player2 = new Player(opponentConfig);
 					

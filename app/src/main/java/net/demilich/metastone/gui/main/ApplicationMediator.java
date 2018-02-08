@@ -13,6 +13,7 @@ import net.demilich.metastone.gui.playmode.PlayModeMediator;
 import net.demilich.metastone.gui.playmode.config.PlayModeConfigMediator;
 import net.demilich.metastone.gui.sandboxmode.SandboxModeMediator;
 import net.demilich.metastone.gui.simulationmode.SimulationMediator;
+import net.demilich.metastone.gui.trainingmode.AlphaTrainingMediator;
 import net.demilich.metastone.gui.trainingmode.TrainingModeMediator;
 import net.demilich.nittygrittymvc.Mediator;
 import net.demilich.nittygrittymvc.interfaces.INotification;
@@ -65,6 +66,7 @@ public class ApplicationMediator extends Mediator<GameNotification> {
 		getFacade().removeMediator(TrainingModeMediator.NAME);
 		getFacade().removeMediator(SandboxModeMediator.NAME);
 		getFacade().removeMediator(BattleOfDecksMediator.NAME);
+		getFacade().removeMediator(AlphaTrainingMediator.NAME);
 	}
 
 }

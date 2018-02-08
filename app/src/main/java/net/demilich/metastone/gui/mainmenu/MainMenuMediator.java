@@ -3,6 +3,7 @@ package net.demilich.metastone.gui.mainmenu;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.demilich.metastone.gui.trainingmode.AlphaTrainingMediator;
 import net.demilich.nittygrittymvc.Mediator;
 import net.demilich.nittygrittymvc.interfaces.INotification;
 import net.demilich.metastone.GameNotification;
@@ -40,7 +41,8 @@ public class MainMenuMediator extends Mediator<GameNotification> {
 			getFacade().registerMediator(new SandboxModeMediator());
 			break;
 		case TRAINING_MODE_SELECTED:
-			getFacade().registerMediator(new TrainingModeMediator());
+			getFacade().registerMediator(new AlphaTrainingMediator());
+//			getFacade().registerMediator(new TrainingModeMediator());
 			break;
 		case BATTLE_OF_DECKS_SELECTED:
 			getFacade().registerMediator(new BattleOfDecksMediator());

@@ -67,8 +67,9 @@ public class MainMenuView extends BorderPane {
 				.setOnAction(event -> NotificationProxy.sendNotification(GameNotification.BATTLE_OF_DECKS_SELECTED));
 
 		if (!BuildConfig.DEV_BUILD) {
-			trainingModeButton.setVisible(false);
-			trainingModeButton.setManaged(false);
+			// TODO:restore these statements
+//			trainingModeButton.setVisible(false);
+//			trainingModeButton.setManaged(false);
 			battleOfDecksButton.setVisible(false);
 			battleOfDecksButton.setManaged(false);
 		}

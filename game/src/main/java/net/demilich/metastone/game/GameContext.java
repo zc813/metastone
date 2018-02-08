@@ -461,6 +461,31 @@ public class GameContext implements Cloneable, IDisposable {
 //		logger.info("{'GameHash':" + hashCode() + ",'Turn':" + turn + ",'winner':" + winner.getId() + "}");
 	}
 
+	/**
+	 * 和普通的 play 唯一区别是在特定时间点会执行指定 task 的 Callback
+	 */
+	public void playTask(PlayGameTask task){
+		logger.debug("Game starts: " + getPlayer1().getName() + " VS. " + getPlayer2().getName());
+		init();
+		while (!gameDecided()) {  // 如果游戏胜负未分，开始切换后的activePlayer的turn
+			int turnPlayer = activePlayer;
+			startTurn(activePlayer);  // 开始当前activePlayer的Turn
+			task.onTurnStart(this, turnPlayer);
+			boolean nextPlay;
+			do{
+				task.onActionStart(this, turnPlayer);
+				nextPlay = playTurn();
+				task.onActionEnd(this, turnPlayer);
+			} while(nextPlay);
+			task.onTurnEnd(this, turnPlayer);
+			if (getTurn() > GameLogic.TURN_LIMIT) {
+				break;
+			}
+		}
+		endGame();
+		task.onGameEnd(this, getWinningPlayerId());
+	}
+
 	public void playFromState(){
 		//Play the whole game starting from any turn
 		while (!gameDecided()) {
@@ -571,7 +596,7 @@ public class GameContext implements Cloneable, IDisposable {
 		}
 	}
 
-	protected void startTurn(int playerId) {
+	public void startTurn(int playerId) {
 		turn++;
 		logic.startTurn(playerId);
 		onGameStateChanged();
