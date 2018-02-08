@@ -20,7 +20,7 @@ class Node {
 	private final List<Node> children = new LinkedList<>();
 	private final GameAction incomingAction;
 	private int visits;
-	private double score;
+	private double score = 0.0;
 	private final int player;
 
 	/**
@@ -71,7 +71,7 @@ class Node {
 
 	public GameAction getBestAction() {
 		GameAction best = null;
-		double bestScore = Double.MIN_VALUE;
+		double bestScore = Double.NEGATIVE_INFINITY;
 		for (Node node : children) {
 			if (node.getScore() > bestScore) {
 				best = node.incomingAction;
