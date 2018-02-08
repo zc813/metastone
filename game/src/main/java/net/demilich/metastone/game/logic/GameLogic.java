@@ -658,6 +658,10 @@ public class GameLogic implements Cloneable {
 	}
 
 	public Card drawCard(int playerId, Entity source) {
+		return drawCard(playerId, source, false);
+	}
+
+	public Card drawCard(int playerId, Entity source, boolean stable) {
 		Player player = context.getPlayer(playerId);
 		CardCollection deck = player.getDeck();
 		if (deck.isEmpty()) {
@@ -671,11 +675,15 @@ public class GameLogic implements Cloneable {
 			return null;
 		}
 
-		Card card = deck.getRandom();
+		Card card;
+		if (stable)
+			card = deck.get(0);
+		else
+			card = deck.getRandom();
 		return drawCard(playerId, card, source);
 	}
 
-	public Card drawCard(int playerId, Card card, Entity source) {
+	private Card drawCard(int playerId, Card card, Entity source) {
 		Player player = context.getPlayer(playerId);
 		player.getStatistics().cardDrawn();
 		player.getDeck().remove(card);
@@ -1139,7 +1147,7 @@ public class GameLogic implements Cloneable {
 
 		log("Setting hero hp to {} for {}", player.getHero().getHp(), player.getName());
 
-		player.getDeck().shuffle();
+		player.getDeck().shuffle(); // Shuffle deck at the beginning of each play
 
 		mulligan(player, begins);
 
@@ -1837,7 +1845,10 @@ public class GameLogic implements Cloneable {
 			refreshAttacksPerRound(summon);
 		}
 		context.fireGameEvent(new TurnStartEvent(context, player.getId()));
-		drawCard(playerId, null);
+//		drawCard(playerId, null); TODO: develop unstable version
+		// 暂时只在每次开始游戏时 shuffle deck，在每次开始 turn 时都抽第一张牌，从而避免 mcts 无法稳定换 turn 问题
+		// 之前狂野海盗战对战 gamestate 胜率 41%，稳定后 49%
+		drawCard(playerId, null, true);
 		checkForDeadEntities();
 	}
 
